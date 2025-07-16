@@ -62,12 +62,8 @@ jobs:
     needs: build-and-scan
     runs-on: ubuntu-latest
     steps:
-    - name: Desplegar contenedor en producción (local)
-      run: |
-        docker stop devsecops-app || true
-        docker rm devsecops-app || true
-        docker run -d --name devsecops-app -p 8000:8000 devsecops-app
-
+      - name: Simular despliegue a producción
+        run: echo "Simulando despliegue a producción ✅"
 
   # 4. Simulación de monitoreo post-despliegue
   post-deployment-monitoring:
