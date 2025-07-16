@@ -1,0 +1,5 @@
+# This is a false positive for our use case.
+CVE-2023-45853
+
+# Will re-evaluate after this date
+CVE-2025-4802
