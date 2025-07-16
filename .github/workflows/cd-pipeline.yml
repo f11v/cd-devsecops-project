@@ -11,16 +11,13 @@ jobs:
     steps:
       - name: Checkout código
         uses: actions/checkout@v3
-
       - name: Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
       - name: Instalar dependencias
         run: |
           pip install -r app/requirements.txt
-
       - name: Pruebas de salud
         run: echo "Pruebas exitosas"
 
@@ -30,7 +27,6 @@ jobs:
     steps:
       - name: Checkout código
         uses: actions/checkout@v3
-
       - name: Instalar SonarScanner
         run: |
           wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
@@ -38,31 +34,43 @@ jobs:
           mv sonar-scanner-5.0.1.3006-linux sonar-scanner
           echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
 
-  # 2. Construcción de imagen Docker y análisis de seguridad
+  # 2. Construcción de imagen y análisis de seguridad (con política de despliegue)
   build-and-scan:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout código
         uses: actions/checkout@v3
-
       - name: Construir imagen Docker
         run: docker build -t devsecops-app ./app
-
       - name: Instalar Trivy y escanear imagen
         run: |
-          # Instalar Trivy
           sudo apt-get update
           sudo apt-get install curl -y
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
-          # Escanear la imagen que acabamos de construir
-          trivy image devsecops-app
+          trivy image --exit-code 1 --severity HIGH,CRITICAL devsecops-app
 
   # 3. Simulación de despliegue a producción
   simulate-prod:
-    # Ahora depende del job que construye y escanea
-    needs: build-and-scan 
+    needs: build-and-scan
     runs-on: ubuntu-latest
     steps:
       - name: Simular despliegue a producción
         run: echo "Simulando despliegue a producción ✅"
+
+  # 4. Simulación de monitoreo post-despliegue
+  post-deployment-monitoring:
+    needs: simulate-prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simular monitoreo y pruebas de humo
+        run: |
+          echo "🚀 Ejecutando pruebas de humo en el entorno de producción..."
+          sleep 10
+          echo "✅ Pruebas de humo exitosas."
+          echo "📊 Verificando logs de la aplicación en busca de anomalías..."
+          sleep 10
+          echo "✅ No se encontraron errores iniciales en los logs."
+          echo "📡 Enviando métricas del despliegue a un dashboard (Grafana/Prometheus)..."
+          sleep 5
+          echo "✅ Monitoreo de seguridad post-despliegue activado."
