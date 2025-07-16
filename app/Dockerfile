@@ -1,5 +1,6 @@
 # Usa una imagen base específica y actualizada
-FROM python:3.10-slim-bookworm
+# Cambiamos a la versión "bullseye" para evitar vulnerabilidades sin parche
+FROM python:3.10-slim-bullseye
 
 # Actualiza los paquetes del SO a sus últimas versiones
 # This command helps fix OS vulnerabilities like the one in zlib1g
