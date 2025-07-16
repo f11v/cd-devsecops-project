@@ -24,6 +24,7 @@ jobs:
       - name: Pruebas de salud
         run: echo "Pruebas exitosas"
 
+  # 2. Análisis con SonarQube
   sonar-analysis:
     needs: build-test
     runs-on: ubuntu-latest
@@ -38,8 +39,15 @@ jobs:
           mv sonar-scanner-5.0.1.3006-linux sonar-scanner
           echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
 
-  # 2. Construcción de imagen Docker y análisis de seguridad
-  build-and-scan:
+      - name: Ejecutar SonarScanner
+        run: sonar-scanner \
+          -Dsonar.projectKey=my_project_key \
+          -Dsonar.sources=./app \
+          -Dsonar.host.url=https://sonarqube.example.com \
+          -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+
+  # 3. Construcción de imagen Docker
+  docker-build:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
@@ -49,19 +57,40 @@ jobs:
       - name: Construir imagen Docker
         run: docker build -t devsecops-app ./app
 
-      - name: Instalar Trivy y escanear imagen
+      - name: Guardar imagen Docker como artifact
+        run: docker save devsecops-app | gzip > devsecops-app.tar.gz
+
+      - name: Subir artifact de imagen Docker
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: devsecops-app.tar.gz
+
+  # 4. Escaneo de seguridad con Trivy
+  trivy-scan:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar artifact de imagen Docker
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Cargar imagen Docker
+        run: gzip -d < devsecops-app.tar.gz | docker load
+
+      - name: Instalar Trivy
         run: |
-          # Instalar Trivy
           sudo apt-get update
           sudo apt-get install curl -y
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
-          # Escanear la imagen que acabamos de construir
-          trivy image devsecops-app
 
-  # 3. Simulación de despliegue a producción
+      - name: Escaneo de vulnerabilidades con Trivy
+        run: trivy image devsecops-app
+
+  # 5. Simulación de despliegue a producción
   simulate-prod:
-    # Ahora depende del job que construye y escanea
-    needs: build-and-scan 
+    needs: trivy-scan
     runs-on: ubuntu-latest
     steps:
       - name: Simular despliegue a producción
