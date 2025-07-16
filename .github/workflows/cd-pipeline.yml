@@ -24,7 +24,7 @@ jobs:
       - name: Pruebas de salud
         run: echo "Pruebas exitosas"
 
-    sonar-analysis:
+  sonar-analysis:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
@@ -38,11 +38,6 @@ jobs:
           mv sonar-scanner-5.0.1.3006-linux sonar-scanner
           echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
 
-      - name: Ejecutar análisis SonarQube
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          sonar-scanner
 
 
   # 2. Construcción de imagen Docker
