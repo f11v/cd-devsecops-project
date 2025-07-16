@@ -44,6 +44,8 @@ jobs:
   docker-build:
     needs: build-test
     runs-on: ubuntu-latest
+    outputs:
+      image_tar: ${{ steps.save-image.outputs.image_tar }}
     steps:
       - name: Checkout código
         uses: actions/checkout@v3
@@ -51,11 +53,30 @@ jobs:
       - name: Construir imagen Docker
         run: docker build -t devsecops-app ./app
 
-  # 3. Análisis de seguridad con Trivy
+      - name: Guardar imagen en archivo tar
+        id: save-image
+        run: |
+          docker save devsecops-app > devsecops-app.tar
+          echo "::set-output name=image_tar::devsecops-app.tar"
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image
+          path: devsecops-app.tar
+
   trivy-scan:
     needs: docker-build
     runs-on: ubuntu-latest
     steps:
+      - name: Download docker image artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-image
+
+      - name: Load docker image
+        run: docker load < devsecops-app.tar
+
       - name: Instalar Trivy
         run: |
           sudo apt-get update
@@ -64,6 +85,7 @@ jobs:
 
       - name: Escaneo de vulnerabilidades con Trivy
         run: trivy image devsecops-app
+
 
 
 
