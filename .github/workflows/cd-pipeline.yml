@@ -92,6 +92,4 @@ jobs:
           fi
           echo "✅ No se encontraron errores en los logs"
 
-      - name: Enviar métrica a Prometheus (opcional)
-        run: |
-          echo "deployment_success 1" | curl --data-binary @- http://<TU_PUSHGATEWAY>:9091/metrics/job/devsecops_app
+      
