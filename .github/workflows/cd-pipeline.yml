@@ -42,7 +42,8 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v3
       - name: Construir imagen Docker
-        run: docker build -t devsecops-app ./app
+        # 👇 CAMBIA ESTA LÍNEA 👇
+        run: docker build -t devsecops-app . # Cambiado de './app' a '.'
       - name: Instalar Trivy y escanear imagen
         run: |
           sudo apt-get update
