@@ -1,8 +1,14 @@
-# Vulnerabilidades críticas en Bullseye que el equipo ha decidido aceptar.
-CVE-2019-8457
-CVE-2023-45853
+# Vulnerabilidades en Debian 12 (Bookworm) sin parche disponible.
+# Riesgo evaluado y aceptado por el equipo el 16 de julio de 2025.
 
-# Vulnerabilidades altas en Bullseye que el equipo ha decidido aceptar.
-CVE-2022-3715
-CVE-2021-33560
-CVE-2022-4899
+# Vulnerabilidad en glibc
+CVE-2025-4802
+
+# Vulnerabilidad en linux-pam
+CVE-2025-6020
+
+# Vulnerabilidad en sqlite
+CVE-2025-6965
+
+# Vulnerabilidad en perl
+CVE-2023-31484
