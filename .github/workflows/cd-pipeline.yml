@@ -41,9 +41,11 @@ jobs:
     steps:
       - name: Checkout código
         uses: actions/checkout@v3
+      - name: List files in workspace
+        run: ls -R
       - name: Construir imagen Docker
         # 👇 CAMBIA ESTA LÍNEA 👇
-        run: docker build -t devsecops-app . # Cambiado de './app' a '.'
+        run: docker build -t devsecops-app ./app
       - name: Instalar Trivy y escanear imagen
         run: |
           sudo apt-get update
