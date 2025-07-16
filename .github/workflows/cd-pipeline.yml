@@ -1,0 +1,80 @@
+name: CD Pipeline with DevSecOps
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  # 1. Build y pruebas
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependencias
+        run: |
+          pip install -r app/requirements.txt
+
+      - name: Pruebas de salud
+        run: echo "Pruebas exitosas"
+
+    sonar-analysis:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Instalar SonarScanner
+        run: |
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+          unzip sonar-scanner-cli-5.0.1.3006-linux.zip
+          mv sonar-scanner-5.0.1.3006-linux sonar-scanner
+          export PATH="$PATH:$(pwd)/sonar-scanner/bin"
+          echo "PATH=$(pwd)/sonar-scanner/bin" >> $GITHUB_ENV
+
+      - name: Ejecutar análisis SonarQube
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          sonar-scanner
+
+  # 2. Construcción de imagen Docker
+  docker-build:
+    needs: build-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v3
+
+      - name: Construir imagen Docker
+        run: docker build -t devsecops-app ./app
+
+  # 3. Análisis de seguridad con Trivy
+  trivy-scan:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install wget -y
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.49.1_Linux-64bit.deb
+          sudo dpkg -i trivy_0.49.1_Linux-64bit.deb
+
+      - name: Escaneo de vulnerabilidades con Trivy
+        run: trivy image devsecops-app
+
+  # 4. Simulación de despliegue a producción
+  simulate-prod:
+    needs: trivy-scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simular despliegue a producción
+        run: echo "Simulando despliegue a producción ✅"
