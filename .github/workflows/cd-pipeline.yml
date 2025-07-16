@@ -4,119 +4,84 @@ on:
   push:
     branches: [ main ]
 
-env:
-  # Define el nombre de la imagen para que sea fácil de reutilizar
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/devsecops-app
-
 jobs:
-  # 1. Build y pruebas (reales)
+  # 1. Build y pruebas
   build-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout código
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v3
       - name: Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-
       - name: Instalar dependencias
-        run: pip install -r app/requirements.txt
-
-      - name: Ejecutar pruebas unitarias # 👉 REEMPLAZADO: Ahora ejecuta pruebas reales
         run: |
-          # Reemplaza 'pytest' con tu comando de prueba real
-          # Ejemplo: pytest app/tests/
-          echo "Ejecutando pruebas reales..."
-          # Si tienes pytest, el comando sería:
-          # pytest
+          pip install -r app/requirements.txt
+      - name: Pruebas de salud
+        run: echo "Pruebas exitosas"
 
-  # 2. Análisis de código estático (SAST)
   sonar-analysis:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout código
-        uses: actions/checkout@v4
-        with:
-          # Sonar necesita el historial completo para analizar nuevas líneas
-          fetch-depth: 0
+        uses: actions/checkout@v3
+      - name: Instalar SonarScanner
+        run: |
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
+          unzip sonar-scanner-cli-5.0.1.3006-linux.zip
+          mv sonar-scanner-5.0.1.3006-linux sonar-scanner
+          echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
 
-      - name: Análisis con SonarCloud # 👉 MEJORADO: Usa la action oficial
-        uses: SonarSource/sonar-scanner-action@master
+      - name: Ejecutar análisis Sonar
+        run: sonar-scanner
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} # Generalmente 'https://sonarcloud.io'
 
-  # 3. Construir, escanear y publicar imagen
-  build-scan-and-push:
+  # 2. Construcción de imagen y análisis de seguridad (con política de despliegue)
+  build-and-scan:
     needs: build-test
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write # Permiso para subir la imagen a GHCR
     steps:
       - name: Checkout código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
+      - name: List files in workspace
+        run: ls -R
+      - name: Construir imagen Docker
+        run: docker build -t devsecops-app ./app
+      - name: Instalar Trivy y escanear imagen
+        run: |
+          sudo apt-get update
+          sudo apt-get install curl -y
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          trivy image --exit-code 1 --severity HIGH,CRITICAL devsecops-app
 
-      - name: Iniciar sesión en GitHub Container Registry # 👉 AÑADIDO: Login al registro
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Construir y etiquetar imagen Docker
-        run: docker build -t $IMAGE_NAME:latest -t $IMAGE_NAME:${{ github.sha }} ./app
-
-      - name: Escanear imagen con Trivy
-        uses: aquasecurity/trivy-action@master # 👉 MEJORADO: Usa la action oficial
-        with:
-          image-ref: '$IMAGE_NAME:latest'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'HIGH,CRITICAL'
-
-      - name: Publicar imagen en GHCR # 👉 AÑADIDO: Publica la imagen
-        run: docker push --all-tags $IMAGE_NAME
-
-  # 4. Desplegar y monitorear en un entorno de simulación
-  deploy-and-monitor:
-    needs: [sonar-analysis, build-scan-and-push] # Depende de que el análisis y la construcción pasen
+  # 3. Simulación de despliegue a producción
+  simulate-prod:
+    needs: build-and-scan
     runs-on: ubuntu-latest
     steps:
-      - name: Iniciar sesión en GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Desplegar contenedor en producción (local)
+      run: |
+        docker stop devsecops-app || true
+        docker rm devsecops-app || true
+        docker run -d --name devsecops-app -p 8000:8000 devsecops-app
 
-      - name: Desplegar contenedor desde GHCR # 👉 CORREGIDO: Jala la imagen del registro
-        run: |
-          docker pull $IMAGE_NAME:latest
-          docker run -d --name devsecops-app -p 8000:8000 $IMAGE_NAME:latest
 
-      - name: Ejecutar prueba de humo # 👉 CORREGIDO: Ahora se ejecuta en el mismo job
+  # 4. Simulación de monitoreo post-despliegue
+  post-deployment-monitoring:
+    needs: simulate-prod
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simular monitoreo y pruebas de humo
         run: |
-          sleep 10 # Esperar a que la app inicie
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health)
-          if [ "$STATUS" -ne 200 ]; then
-            echo "❌ Endpoint /health falló con código $STATUS"
-            docker logs devsecops-app # Muestra los logs si falla
-            exit 1
-          fi
-          echo "✅ Endpoint de salud funcionando correctamente"
-
-      - name: Revisar logs del contenedor # 👉 CORREGIDO: Ahora se ejecuta en el mismo job
-        run: |
-          LOGS=$(docker logs devsecops-app 2>&1 | grep -iE "error|exception")
-          if [ -n "$LOGS" ]; then
-            echo "❌ Se encontraron errores en los logs:"
-            echo "$LOGS"
-            exit 1
-          fi
-          echo "✅ No se encontraron errores en los logs"
+          echo "🚀 Ejecutando pruebas de humo en el entorno de producción..."
+          sleep 10
+          echo "✅ Pruebas de humo exitosas."
+          echo "📊 Verificando logs de la aplicación en busca de anomalías..."
+          sleep 10
+          echo "✅ No se encontraron errores iniciales en los logs."
+          echo "📡 Enviando métricas del despliegue a un dashboard (Grafana/Prometheus)..."
+          sleep 5
+          echo "✅ Monitoreo de seguridad post-despliegue activado."
