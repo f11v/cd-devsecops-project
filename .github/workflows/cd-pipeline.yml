@@ -59,12 +59,12 @@ jobs:
       - name: Instalar Trivy
         run: |
           sudo apt-get update
-          sudo apt-get install wget -y
-          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_Linux-64bit.deb
-          sudo dpkg -i trivy_Linux-64bit.deb
+          sudo apt-get install curl -y
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
       - name: Escaneo de vulnerabilidades con Trivy
         run: trivy image devsecops-app
+
 
 
   # 4. Simulación de despliegue a producción
