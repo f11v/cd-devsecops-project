@@ -1,16 +1,18 @@
-# 1. Cambia esta línea por una imagen más segura
-FROM python:3.9-slim-bookworm
+# Use the lightweight and secure 'alpine' base image
+FROM python:3.9-alpine
 
+# Set the working directory in the container
 WORKDIR /app
 
-# 2. Usa requirements.txt para instalar dependencias de forma consistente
+# Copy the requirements file and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip setuptools && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copia el resto del código de la aplicación
+# Copy the rest of your application code
 COPY . .
 
+# Expose the port your app runs on
 EXPOSE 5000
 
-# 3. Corrige el nombre del archivo a ejecutar
+# Command to run your application
 CMD ["python", "MAIN.PY"]
