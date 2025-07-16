@@ -38,10 +38,8 @@ jobs:
           mv sonar-scanner-5.0.1.3006-linux sonar-scanner
           echo "$(pwd)/sonar-scanner/bin" >> $GITHUB_PATH
 
-
-
-  # 2. Construcción de imagen Docker
-  docker-build:
+  # 2. Construcción de imagen Docker y análisis de seguridad
+  build-and-scan:
     needs: build-test
     runs-on: ubuntu-latest
     steps:
@@ -51,23 +49,19 @@ jobs:
       - name: Construir imagen Docker
         run: docker build -t devsecops-app ./app
 
-  # 3. Análisis de seguridad con Trivy
-  trivy-scan:
-    needs: docker-build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Instalar Trivy
+      - name: Instalar Trivy y escanear imagen
         run: |
+          # Instalar Trivy
           sudo apt-get update
           sudo apt-get install curl -y
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+          # Escanear la imagen que acabamos de construir
+          trivy image devsecops-app
 
-      - name: Escaneo de vulnerabilidades con Trivy
-        run: trivy image devsecops-app
-
-  # 4. Simulación de despliegue a producción
+  # 3. Simulación de despliegue a producción
   simulate-prod:
-    needs: trivy-scan
+    # Ahora depende del job que construye y escanea
+    needs: build-and-scan 
     runs-on: ubuntu-latest
     steps:
       - name: Simular despliegue a producción
