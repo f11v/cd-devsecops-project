@@ -65,8 +65,6 @@ jobs:
     - name: Escaneo de vulnerabilidades con Trivy
       run: trivy image devsecops-app
 
-
-
   # 4. Simulación de despliegue a producción
   simulate-prod:
     needs: trivy-scan
