@@ -59,25 +59,39 @@ jobs:
 
   # 3. Simulación de despliegue a producción
   simulate-prod:
-    needs: build-and-scan
-    runs-on: ubuntu-latest
-    steps:
-      - name: Simular despliegue a producción
-        run: echo "Simulando despliegue a producción ✅"
+  needs: build-and-scan
+  runs-on: ubuntu-latest
+  steps:
+    - name: Desplegar contenedor en producción
+      run: |
+        docker stop devsecops-app || true
+        docker rm devsecops-app || true
+        docker run -d --name devsecops-app -p 8000:8000 devsecops-app
 
-  # 4. Simulación de monitoreo post-despliegue
   post-deployment-monitoring:
     needs: simulate-prod
     runs-on: ubuntu-latest
     steps:
-      - name: Simular monitoreo y pruebas de humo
+      - name: Ejecutar prueba de humo
         run: |
-          echo "🚀 Ejecutando pruebas de humo en el entorno de producción..."
           sleep 10
-          echo "✅ Pruebas de humo exitosas."
-          echo "📊 Verificando logs de la aplicación en busca de anomalías..."
-          sleep 10
-          echo "✅ No se encontraron errores iniciales en los logs."
-          echo "📡 Enviando métricas del despliegue a un dashboard (Grafana/Prometheus)..."
-          sleep 5
-          echo "✅ Monitoreo de seguridad post-despliegue activado."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health)
+          if [ "$STATUS" -ne 200 ]; then
+            echo "❌ Endpoint /health falló con código $STATUS"
+            exit 1
+          fi
+          echo "✅ Endpoint de salud funcionando correctamente"
+
+      - name: Revisar logs del contenedor
+        run: |
+          LOGS=$(docker logs devsecops-app | grep -iE "error|exception")
+          if [ -n "$LOGS" ]; then
+            echo "❌ Se encontraron errores:"
+            echo "$LOGS"
+            exit 1
+          fi
+          echo "✅ No se encontraron errores en los logs"
+
+      - name: Enviar métrica a Prometheus (opcional)
+        run: |
+          echo "deployment_success 1" | curl --data-binary @- http://<TU_PUSHGATEWAY>:9091/metrics/job/devsecops_app
