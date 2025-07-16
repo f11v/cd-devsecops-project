@@ -31,7 +31,7 @@ jobs:
       - name: Checkout código
         uses: actions/checkout@v3
 
-            - name: Instalar SonarScanner
+      - name: Instalar SonarScanner
         run: |
           wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
           unzip sonar-scanner-cli-5.0.1.3006-linux.zip
@@ -43,6 +43,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           sonar-scanner
+
 
   # 2. Construcción de imagen Docker
   docker-build:
