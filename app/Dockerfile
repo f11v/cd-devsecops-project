@@ -5,7 +5,13 @@ FROM python:3.10-slim-bookworm
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY ./app/requirements.txt .
+
+# Como el contexto es ./app, copia directamente el archivo
+COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
-COPY ./app .
+
+# Copia todo el contenido del contexto (el resto de los archivos de ./app)
+COPY . .
+
 CMD ["python", "app.py"]
