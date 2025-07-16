@@ -53,17 +53,17 @@ jobs:
 
   # 3. Análisis de seguridad con Trivy
   trivy-scan:
-  needs: docker-build
-  runs-on: ubuntu-latest
-  steps:
-    - name: Instalar Trivy
-      run: |
-        sudo apt-get update
-        sudo apt-get install curl -y
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install curl -y
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
-    - name: Escaneo de vulnerabilidades con Trivy
-      run: trivy image devsecops-app
+      - name: Escaneo de vulnerabilidades con Trivy
+        run: trivy image devsecops-app
 
   # 4. Simulación de despliegue a producción
   simulate-prod:
