@@ -1,5 +1,8 @@
-# Vulnerabilidades en paquetes del SO sin parche disponible en Debian Bookworm.
-# Se acepta el riesgo hasta que haya una actualización.
-CVE-2025-6020
-CVE-2025-6965
-CVE-2023-31484
+# Vulnerabilidades críticas en Bullseye que el equipo ha decidido aceptar.
+CVE-2019-8457
+CVE-2023-45853
+
+# Vulnerabilidades altas en Bullseye que el equipo ha decidido aceptar.
+CVE-2022-3715
+CVE-2021-33560
+CVE-2022-4899
