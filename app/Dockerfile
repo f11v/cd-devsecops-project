@@ -1,18 +1,15 @@
-# Use the lightweight and secure 'alpine' base image
+# 1. Usar la imagen base segura y ligera de Alpine
 FROM python:3.9-alpine
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of your application code
+# 2. Actualizar pip y setuptools ANTES de instalar las dependencias
+#    Esta es la línea clave que faltaba para arreglar todo.
+RUN pip install --no-cache-dir --upgrade pip setuptools && pip install --no-cache-dir -r requirements.txt
+
 COPY . .
 
-# Expose the port your app runs on
 EXPOSE 5000
-
-# Command to run your application
 CMD ["python", "MAIN.PY"]
