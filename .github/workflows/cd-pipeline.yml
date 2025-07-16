@@ -44,8 +44,6 @@ jobs:
   docker-build:
     needs: build-test
     runs-on: ubuntu-latest
-    outputs:
-      image_tar: ${{ steps.save-image.outputs.image_tar }}
     steps:
       - name: Checkout código
         uses: actions/checkout@v3
@@ -53,39 +51,19 @@ jobs:
       - name: Construir imagen Docker
         run: docker build -t devsecops-app ./app
 
-      - name: Guardar imagen en archivo tar
-        id: save-image
-        run: |
-          docker save devsecops-app > devsecops-app.tar
-          echo "::set-output name=image_tar::devsecops-app.tar"
-
-      - name: Upload image artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: docker-image
-          path: devsecops-app.tar
-
+  # 3. Análisis de seguridad con Trivy
   trivy-scan:
-    needs: docker-build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download docker image artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: docker-image
+  needs: docker-build
+  runs-on: ubuntu-latest
+  steps:
+    - name: Instalar Trivy
+      run: |
+        sudo apt-get update
+        sudo apt-get install curl -y
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
-      - name: Load docker image
-        run: docker load < devsecops-app.tar
-
-      - name: Instalar Trivy
-        run: |
-          sudo apt-get update
-          sudo apt-get install curl -y
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
-
-      - name: Escaneo de vulnerabilidades con Trivy
-        run: trivy image devsecops-app
-
+    - name: Escaneo de vulnerabilidades con Trivy
+      run: trivy image devsecops-app
 
 
 
