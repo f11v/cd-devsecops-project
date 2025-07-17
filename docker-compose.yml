@@ -1,0 +1,41 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # 1. Tu aplicación Python
+  app:
+    build: ./app  # Construye la imagen usando el Dockerfile en la carpeta ./app
+    container_name: devsecops-app
+    ports:
+      - "8000:8000" # Expone el puerto 8000 de tu app al puerto 8000 de tu máquina
+    volumes:
+      - ./app:/app  # Monta el código local en el contenedor para reflejar cambios al instante
+
+  # 2. SonarQube para análisis de código estático (SAST)
+  sonarqube:
+    image: sonarqube:lts-community # Usamos la imagen oficial de la comunidad
+    container_name: sonarqube
+    ports:
+      - "9000:9000" # Puerto para la UI de SonarQube
+      - "9001:9001"
+    environment:
+      - SONAR_FORCEAUTHENTICATION=false # Permite el acceso sin login para pruebas locales
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+
+  # 3. Grafana para monitoreo
+  grafana:
+    image: grafana/grafana-oss:latest # Usamos la imagen oficial open-source
+    container_name: grafana
+    ports:
+      - "3000:3000" # Puerto para la UI de Grafana
+    volumes:
+      - grafana_data:/var/lib/grafana # Persiste los dashboards y configuraciones
+
+volumes:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
+  grafana_data:
